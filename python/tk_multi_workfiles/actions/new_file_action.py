@@ -11,7 +11,10 @@
 """
 Action to create a new file.
 """
+import re
+from pprint import pformat
 
+import sgtk
 from sgtk import TankError
 from sgtk.platform.qt import QtGui
 from sgtk import support_url
@@ -19,6 +22,10 @@ from sgtk import support_url
 from .file_action import FileAction
 from .action import Action
 from ..scene_operation import prepare_new_scene, reset_current_scene, NEW_FILE_ACTION
+
+# Since there is no explicit Exception which we can catch for `unregister_folders`,
+# this regex will help us to identify `sgtk.TankError` if we have to unregister_folders
+UNREGISTER_REGEX = re.compile(r"'(?P<command>tank) (?P<sub_command>unregister_folders) (?P<path>.*)'")
 
 
 class NewFileAction(Action):
@@ -71,36 +78,69 @@ class NewFileAction(Action):
                     self._environment.work_template, validate=True
                 )
             except TankError as tank_error:
-                self._app.log_exception(
-                    "Unable to resolve template fields after folder creation!"
-                )
+                # -----------------------------------------------------------
+                # XXX: Since, workfile2 app doesnt expose any hook to override
+                #  folder creation logic nor toolkit does.
+                #
+                #  FP handling of actively looking for stale Filesystem
+                #  and fixing them
+                # -----------------------------------------------------------
+                match = UNREGISTER_REGEX.search(str(tank_error))
+                if match:
+                    path_details = match.groupdict()
+                    self._app.log_debug('Identified shot as retired shot from SG')
+                    self._app.log_debug('Cleaning up old sins...')
+                    self._app.log_debug('>> Running: {}'.format(match.group()))
 
-                error_title = "Failed to complete '{}' action".format(self.label)
-                error_text = "{title}:\n\n{body}".format(
-                    title=error_title,
-                    body=(
-                        "Unable to resolve template fields after folder creation!  This could mean "
-                        "there is a mismatch between your folder schema and templates. Please "
-                        "contact us via {} if you need help fixing this.".format(
-                            support_url
-                        )
-                    ),
-                )
-                error_details = str(tank_error)
+                    unregister_callback = sgtk.get_command(path_details['sub_command'].strip(),
+                                                           self._environment.context.sgtk)
+                    path = sgtk.util.ShotgunPath.normalize(path_details['path'].strip())
 
-                msg_box = QtGui.QMessageBox(
-                    QtGui.QMessageBox.Information,
-                    error_title,
-                    error_text,
-                    QtGui.QMessageBox.Ok,
-                    parent_ui,
-                )
-                msg_box.setDefaultButton(QtGui.QMessageBox.Ok)
-                if error_details:
-                    msg_box.setDetailedText(error_details)
+                    # run the callbacks..
+                    unregister_details = unregister_callback.execute({'path': path})
+                    self._app.log_debug('Unregistered folders: {}'.format(pformat(unregister_details)))
+                    self._app.log_debug('> Synchronizing folders..')
+                    sgtk.get_command('synchronize_folders', self._environment.context.sgtk).execute({})
 
-                msg_box.exec_()
-                return False
+                    FileAction.create_folders_if_needed(self._environment.context, self._environment.work_template)
+                    # and double check that we can get all context fields for the work template:
+                    self._environment.context.as_template_fields(
+                        self._environment.work_template, validate=True
+                    )
+
+                # -----------------------------------------------------------
+                else:
+
+                    self._app.log_exception(
+                        "Unable to resolve template fields after folder creation!"
+                    )
+
+                    error_title = "Failed to complete '{}' action".format(self.label)
+                    error_text = "{title}:\n\n{body}".format(
+                        title=error_title,
+                        body=(
+                            "Unable to resolve template fields after folder creation!  This could mean "
+                            "there is a mismatch between your folder schema and templates. Please "
+                            "contact us via {} if you need help fixing this.".format(
+                                support_url
+                            )
+                        ),
+                    )
+                    error_details = str(tank_error)
+
+                    msg_box = QtGui.QMessageBox(
+                        QtGui.QMessageBox.Information,
+                        error_title,
+                        error_text,
+                        QtGui.QMessageBox.Ok,
+                        parent_ui,
+                    )
+                    msg_box.setDefaultButton(QtGui.QMessageBox.Ok)
+                    if error_details:
+                        msg_box.setDetailedText(error_details)
+
+                    msg_box.exec_()
+                    return False
 
             else:
                 # reset the current scene:
