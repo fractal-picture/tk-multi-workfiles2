@@ -11,11 +11,18 @@
 """
 """
 import os
+import re
+from pprint import pformat
 
 import sgtk
 from sgtk import TankError
 from sgtk.platform.qt import QtGui, QtCore
 from .action import Action
+
+
+# Since there is no explicit Exception which we can catch for `unregister_folders`,
+# this regex will help us to identify `sgtk.TankError` if we have to unregister_folders
+UNREGISTER_REGEX = re.compile(r"'(?P<command>tank) (?P<sub_command>unregister_folders) (?P<path>.*)'")
 
 
 class FileAction(Action):
@@ -59,6 +66,38 @@ class FileAction(Action):
                 ctx_entity.get("id"),
                 engine=app.engine.instance_name,
             )
+        except TankError as tank_error:
+            # -----------------------------------------------------------
+            # XXX: Since, workfiles2 app doesnt expose any hook to override
+            #  folder creation logic nor toolkit does.
+            #
+            #  FP handling of actively looking for stale Filesystem
+            #  and fixing them
+            # -----------------------------------------------------------
+            match = UNREGISTER_REGEX.search(str(tank_error))
+            if match:
+                path_details = match.groupdict()
+                app.log_debug('Identified shot as retired shot from SG')
+                app.log_debug('Cleaning up old sins...')
+                app.log_debug('>> Running: {}'.format(match.group()))
+
+                unregister_callback = sgtk.get_command(path_details['sub_command'].strip(),
+                                                       app.sgtk)
+                path = sgtk.util.ShotgunPath.normalize(path_details['path'].strip())
+
+                # run the callbacks..
+                unregister_details = unregister_callback.execute({'path': path})
+                app.log_debug('Unregistered folders: {}'.format(pformat(unregister_details)))
+                app.log_debug('> Synchronizing folders..')
+                sgtk.get_command('synchronize_folders', app.sgtk).execute({'full_sync': True})
+
+                ctx_entity = ctx.task or ctx.entity or ctx.project
+                app.sgtk.create_filesystem_structure(
+                    ctx_entity.get("type"),
+                    ctx_entity.get("id"),
+                    engine=app.engine.instance_name,
+                )
+            # -----------------------------------------------------------
         finally:
             QtGui.QApplication.restoreOverrideCursor()
 
