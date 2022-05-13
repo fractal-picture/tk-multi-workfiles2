@@ -14,7 +14,7 @@ so that they can choose one to open
 """
 
 import sgtk
-from sgtk.platform.qt import QtGui
+from sgtk.platform.qt import QtCore, QtGui
 
 from .actions.file_action_factory import FileActionFactory
 from .actions.action import SeparatorAction, ActionGroup
@@ -46,6 +46,7 @@ class FileOpenForm(FileFormBase):
             # doing this inside a try-except to ensure any exceptions raised don't
             # break the UI and crash the dcc horribly!
             self._do_init()
+            self._do_fp_init()
         except Exception:
             app = sgtk.platform.current_bundle()
             app.log_exception("Unhandled exception during Form construction!")
@@ -89,6 +90,109 @@ class FileOpenForm(FileFormBase):
         app = sgtk.platform.current_bundle()
         self._ui.browser.select_work_area(app.context)
         self._ui.browser.select_file(current_file, app.context)
+
+    def _do_fp_init(self):
+        self.engine = sgtk.platform.current_engine()
+        self.snapshot_app = self.engine.apps.get('tk-multi-snapshot')
+        self.snapshot_window_title = 'ShotGrid: Snapshot History'
+        self.snapshot_module = self.snapshot_app.import_module("tk_multi_snapshot")
+        self.snapshot_handler = self.snapshot_module.Snapshot(self.snapshot_app)
+
+        self.selected_file, self.selected_file_env = None, None
+
+        # add history button
+        self.btn_history = QtGui.QPushButton()
+        self.btn_history.setIcon(QtGui.QIcon(self.snapshot_app.icon_256))
+        self.btn_history.setIconSize(QtCore.QSize(32, 32))
+        self.btn_history.setStyleSheet("background-image: url('%s');")
+        self.btn_history.setToolTip('Snapshot History')
+        self.btn_history.setCheckable(True)
+        self.btn_history.clicked.connect(self._fp_on_toggle_history_button)
+        self._ui.horizontalLayout_3.addWidget(self.btn_history)
+
+        self.custom_snap_widget = QtGui.QWidget()
+        self.custom_snap_widget.setVisible(False)
+        self.lyt_snap = QtGui.QVBoxLayout()
+        self.lyt_snap.setContentsMargins(0, 0, 0, 0)
+        self.custom_snap_widget.setLayout(self.lyt_snap)
+        self.snapshot_view = self.snapshot_module.SnapshotListView()
+        self.snapshot_view.set_app(self.snapshot_app)
+        self.btn_refresh = QtGui.QPushButton('Refresh')
+        self.btn_refresh.clicked.connect(self._fp_on_refresh_clicked)
+        self.chkbox_snapshot_current = QtGui.QCheckBox('Snapshot Current')
+        self.chkbox_snapshot_current.setToolTip('Take a snapshot of current file before restoring the snapshot')
+        self.btn_restore = QtGui.QPushButton('Restore')
+        self.btn_restore.clicked.connect(self._fp_on_snapshot_restore_clicked)
+        self.lyt_snap_restore = QtGui.QHBoxLayout()
+        self.lyt_snap_restore.addWidget(self.btn_refresh)
+        self.lyt_snap_restore.addStretch(1)
+        self.lyt_snap_restore.addWidget(self.chkbox_snapshot_current)
+        self.lyt_snap_restore.addWidget(self.btn_restore)
+        self.lyt_snap.addWidget(self.snapshot_view)
+        self.lyt_snap.addLayout(self.lyt_snap_restore)
+        self._ui.browser._ui.splitter.addWidget(self.custom_snap_widget)
+
+        self._ui.browser.file_selected.connect(self._fp_on_file_select)
+
+    def _fp_on_file_select(self, file, env):
+        self.selected_file = file
+        self.selected_file_env = env
+        if self.selected_file and self.custom_snap_widget.isVisible():
+            self.snapshot_view.set_label(self.selected_file.name)
+            self.snapshot_view.clear()
+            self.snapshot_view.load({'handler': self.snapshot_handler, 'file_path': file.path})
+
+    def _fp_on_refresh_clicked(self):
+        self._fp_on_file_select(self.selected_file, self.selected_file_env)
+
+    def _fp_on_snapshot_restore_clicked(self):
+        snapshot_path = self.snapshot_view.get_selected_path()
+        target_workfile_path = self.selected_file.path
+
+        # get context ready
+        context = self.selected_file_env.context
+        work_template = self.selected_file_env.work_template
+        context_fields = context.as_template_fields(work_template)
+        name = self.selected_file.name
+        current_version = self.selected_file.version
+        next_version = current_version + 1
+        context_fields['name'] = name
+        context_fields['version'] = current_version + 1
+        next_version_path = work_template.apply_fields(context_fields)
+
+        if snapshot_path:
+            msgbox = QtGui.QMessageBox()
+            msgbox.setWindowTitle(self.snapshot_window_title)
+            msgbox.setIcon(msgbox.Question)
+            msgbox.setText('Do you want to restore snapshot as next version?')
+            btn_yes = msgbox.addButton('Restore as next version - v%s' % str(next_version).zfill(3),
+                                        QtGui.QMessageBox.YesRole)
+            btn_no = msgbox.addButton('Restore as current version - v%s' % str(current_version).zfill(3),
+                                       QtGui.QMessageBox.NoRole)
+            btn_cancel = msgbox.addButton('Cancel', QtGui.QMessageBox.RejectRole)
+            msgbox.exec_()
+
+            if msgbox.clickedButton() == btn_cancel:
+                return
+
+            if msgbox.clickedButton() == btn_yes:
+                target_workfile_path = next_version_path
+
+            self.snapshot_handler.restore_snapshot(target_workfile_path, snapshot_path,
+                                                   snapshot_current=self.chkbox_snapshot_current.isChecked())
+
+            self._ui.browser._file_model.async_refresh()
+
+            if self.chkbox_snapshot_current.isChecked():
+                self._fp_on_refresh_clicked()
+            QtGui.QMessageBox.information(self, 'Fractal Picture', 'Snapshot restored successfully!')
+
+    def _fp_on_toggle_history_button(self, toggled=None):
+        if self.btn_history.isChecked():
+            self.custom_snap_widget.setVisible(True)
+            self._fp_on_refresh_clicked()
+        else:
+            self.custom_snap_widget.setVisible(False)
 
     def _is_using_user_sandboxes(self):
         """
