@@ -185,7 +185,7 @@ class FileOpenForm(FileFormBase):
 
             if self.chkbox_snapshot_current.isChecked():
                 self._fp_on_refresh_clicked()
-            QtGui.QMessageBox.information(self, 'Fractal Picture', 'Snapshot restored successfully!')
+            QtGui.QMessageBox.information(self, self.snapshot_window_title, 'Snapshot restored successfully!')
 
     def _fp_on_toggle_history_button(self, toggled=None):
         if self.btn_history.isChecked():
