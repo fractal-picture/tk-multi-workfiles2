@@ -92,8 +92,12 @@ class FileOpenForm(FileFormBase):
         self._ui.browser.select_file(current_file, app.context)
 
     def _do_fp_init(self):
-        self.engine = sgtk.platform.current_engine()
-        self.snapshot_app = self.engine.apps.get('tk-multi-snapshot')
+        engine = sgtk.platform.current_engine()
+        self.snapshot_app = engine.apps.get('tk-multi-snapshot')
+
+        if not self.snapshot_app:
+            return
+
         self.snapshot_window_title = 'ShotGrid: Snapshot History'
         self.snapshot_module = self.snapshot_app.import_module("tk_multi_snapshot")
         self.snapshot_handler = self.snapshot_module.Snapshot(self.snapshot_app)
@@ -101,12 +105,13 @@ class FileOpenForm(FileFormBase):
         self.selected_file, self.selected_file_env = None, None
 
         # add history button
-        self.btn_history = QtGui.QPushButton()
+        self.btn_history = QtGui.QToolButton()
         self.btn_history.setIcon(QtGui.QIcon(self.snapshot_app.icon_256))
         self.btn_history.setIconSize(QtCore.QSize(32, 32))
-        self.btn_history.setStyleSheet("background-image: url('%s');")
+        # self.btn_history.setStyleSheet("background-image: url('%s');")
         self.btn_history.setToolTip('Snapshot History')
         self.btn_history.setCheckable(True)
+        self.btn_history.setAutoRaise(True)
         self.btn_history.clicked.connect(self._fp_on_toggle_history_button)
         self._ui.horizontalLayout_3.addWidget(self.btn_history)
 
@@ -116,6 +121,7 @@ class FileOpenForm(FileFormBase):
         self.lyt_snap.setContentsMargins(0, 0, 0, 0)
         self.custom_snap_widget.setLayout(self.lyt_snap)
         self.snapshot_view = self.snapshot_module.SnapshotListView()
+        self.snapshot_view.set_message('Please select file to see snapshots')
         self.snapshot_view.set_app(self.snapshot_app)
         self.btn_refresh = QtGui.QPushButton('Refresh')
         self.btn_refresh.clicked.connect(self._fp_on_refresh_clicked)
@@ -222,6 +228,11 @@ class FileOpenForm(FileFormBase):
             entity, breadcrumbs
         )
         self._update_new_file_btn(env_details)
+        snapshot_view = getattr(self, 'snapshot_view', None)
+        if snapshot_view:
+            self.snapshot_view.set_label('')
+            self.snapshot_view.set_message('Please select file to see snapshots')
+            snapshot_view.clear()
 
     def _on_browser_file_double_clicked(self, file, env):
         """
