@@ -147,7 +147,7 @@ class FileOpenForm(FileFormBase):
         if self.selected_file and self.custom_snap_widget.isVisible():
             self.snapshot_view.set_label(self.selected_file.name)
             self.snapshot_view.clear()
-            self.snapshot_view.load({'handler': self.snapshot_handler, 'file_path': file.path})
+            self.snapshot_view.load({'handler': self.snapshot_handler, 'file_path': file.path, 'full_history': False})
 
     def _fp_on_refresh_clicked(self):
         self._fp_on_file_select(self.selected_file, self.selected_file_env)
