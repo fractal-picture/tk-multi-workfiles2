@@ -113,6 +113,12 @@ configuration:
         description: Specify a hook that will create the task and do any input validation that is
                      required.
 
+    user_login_hook:
+        type: hook
+        default_value: "{self}/user_login.py"
+        description: Contains methods to retrieve custom user login and push user data when a
+                     work file is saved.
+
     # General preferences
     #
     entities:
@@ -290,4 +296,4 @@ supported_engines:
 frameworks:
     # We need a version of tk-framework-shotgunutils with a fix for deleting items.
     - {"name": "tk-framework-shotgunutils", "version": "v5.x.x", "minimum_version": "v5.3.5"}
-    - {"name": "tk-framework-qtwidgets", "version": "v2.x.x", "minimum_version": "v2.10.5"}
+    - {"name": "tk-framework-qtwidgets", "version": "v2.x.x", "minimum_version": "v2.10.6"}
