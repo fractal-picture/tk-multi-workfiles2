@@ -17,7 +17,7 @@ import os
 
 import sgtk
 
-__version__ = 'v0.13.04'
+__version__ = 'v0.13.05'
 
 
 class MultiWorkFiles(sgtk.platform.Application):
