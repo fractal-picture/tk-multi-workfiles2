@@ -11,8 +11,6 @@
 """
 Implementation of the user cache storing Shotgun user information
 """
-import os
-import sys
 import sgtk
 
 from .util import Threaded
@@ -154,7 +152,7 @@ class UserCache(Threaded):
                     "id": None,
                     "email": None,
                     "login": login_name,
-                    "name": "{login_name} (System)".format(login_name=login_name),
+                    "name": "%s (System)" % login_name,
                     "image": None,
                 }
             except Exception as e:
