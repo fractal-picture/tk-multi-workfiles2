@@ -96,6 +96,12 @@ class FileOpenForm(FileFormBase):
 
     def _do_fp_init(self):
         engine = sgtk.platform.current_engine()
+        if not engine:
+            return
+
+        if not engine.apps:
+            return
+
         self.snapshot_app = engine.apps.get('tk-multi-snapshot')
 
         if not self.snapshot_app:
