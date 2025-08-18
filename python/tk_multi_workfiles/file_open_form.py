@@ -20,6 +20,8 @@ from .actions.file_action_factory import FileActionFactory
 from .actions.action import SeparatorAction, ActionGroup
 from .actions.new_file_action import NewFileAction
 
+from .framework_qtwidgets import ShotgunMenu
+
 from .file_form_base import FileFormBase
 from .ui.file_open_form import Ui_FileOpenForm
 
@@ -36,7 +38,7 @@ class FileOpenForm(FileFormBase):
     def __init__(self, parent=None):
         """Construction"""
 
-        super(FileOpenForm, self).__init__(parent)
+        super().__init__(parent)
 
         self._app = sgtk.platform.current_bundle()
 
@@ -59,7 +61,7 @@ class FileOpenForm(FileFormBase):
 
     def _do_init(self):
         """ """
-        super(FileOpenForm, self)._do_init()
+        super()._do_init()
 
         # start by disabling buttons:
         self._ui.change_ctx_btn.hide()
@@ -226,15 +228,15 @@ class FileOpenForm(FileFormBase):
     def _on_browser_file_selected(self, file, env):
         """ """
         self._on_selected_file_changed(file, env)
-        self._update_new_file_btn(env)
+        if file:
+            # Only validate the button state if a file is selected.
+            self._update_new_file_btn(env)
 
     def _on_browser_work_area_changed(self, entity, breadcrumbs):
         """
         Slot triggered whenever the work area is changed in the browser.
         """
-        env_details = super(FileOpenForm, self)._on_browser_work_area_changed(
-            entity, breadcrumbs
-        )
+        env_details = super()._on_browser_work_area_changed(entity, breadcrumbs)
         self._update_new_file_btn(env_details)
         snapshot_view = getattr(self, 'snapshot_view', None)
         if snapshot_view:
@@ -273,7 +275,7 @@ class FileOpenForm(FileFormBase):
             # build the menu and add the actions to it:
             menu = self._ui.open_options_btn.menu()
             if not menu:
-                menu = QtGui.QMenu(self._ui.open_options_btn)
+                menu = ShotgunMenu(self._ui.open_options_btn)
                 self._ui.open_options_btn.setMenu(menu)
             menu.clear()
             self._populate_open_menu(menu, file_actions[1:])
@@ -300,7 +302,7 @@ class FileOpenForm(FileFormBase):
             return
 
         # build the context menu:
-        context_menu = QtGui.QMenu(self.sender())
+        context_menu = ShotgunMenu(self.sender())
         self._populate_open_menu(context_menu, file_actions[1:])
 
         # map the point to a global position:

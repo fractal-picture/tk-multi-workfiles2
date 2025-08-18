@@ -8,12 +8,10 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-"""
-"""
+""" """
 
 import sgtk
 from sgtk.platform.qt import QtGui, QtCore
-from tank_vendor import six
 
 from .file_action import FileAction
 
@@ -42,7 +40,11 @@ class ShowPublishInShotgunAction(ShowInShotgunAction):
 
     def __init__(self, file, file_versions, environment):
         ShowInShotgunAction.__init__(
-            self, "Show Publish in ShotGrid", file, file_versions, environment
+            self,
+            "Show Publish in Flow Production Tracking",
+            file,
+            file_versions,
+            environment,
         )
 
     def execute(self, parent_ui):
@@ -58,14 +60,16 @@ class ShowLatestPublishInShotgunAction(ShowInShotgunAction):
 
     def __init__(self, file, file_versions, environment):
         ShowInShotgunAction.__init__(
-            self, "Show Latest Publish in ShotGrid", file, file_versions, environment
+            self,
+            "Show Latest Publish in Flow Production Tracking",
+            file,
+            file_versions,
+            environment,
         )
 
     def execute(self, parent_ui):
         """ """
-        publish_versions = [
-            v for v, f in six.iteritems(self.file_versions) if f.is_published
-        ]
+        publish_versions = [v for v, f in self.file_versions.items() if f.is_published]
         if not publish_versions:
             return
 

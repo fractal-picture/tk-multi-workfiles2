@@ -64,7 +64,7 @@ class StepListWidget(QtCore.QObject):
     """
 
     _step_list = None
-    step_filter_changed = QtCore.Signal(object)  # List of SG step dictionaries
+    step_filter_changed = QtCore.Signal(object)  # List of PTR step dictionaries
 
     def __init__(self, list_widget):
         """
@@ -76,7 +76,7 @@ class StepListWidget(QtCore.QObject):
                             hidden when showing steps for a given Entity type is
                             needed or not needed.
         """
-        super(StepListWidget, self).__init__()
+        super().__init__()
         self._list_widget = list_widget
         self._cache_step_list()
         self._step_widgets = defaultdict(list)

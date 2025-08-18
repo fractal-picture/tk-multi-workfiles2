@@ -9,7 +9,6 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import sgtk
-from tank_vendor import six
 from sgtk.platform.qt import QtGui
 
 import os
@@ -182,7 +181,19 @@ class FileItem(object):
         """
         :returns:   The Shotgun step entity dictionary that this file is associated with.
         """
-        return self._details.get("step") or self._publish_details.get("step")
+        return (
+            self._details.get("step")
+            or self._publish_details.get("step")
+            or self._property_from_key("Step")
+        )
+
+    @property
+    def asset(self):
+        return self._property_from_key("Asset")
+
+    @property
+    def asset_type(self):
+        return self._property_from_key("sg_asset_type")
 
     # @property
     def _get_thumbnail_path(self):
@@ -239,6 +250,22 @@ class FileItem(object):
         self._versions = {k: value[k] for k in sorted(value)}
 
     versions = property(_get_versions, _set_versions)
+
+    def _property_from_key(self, property_name):
+        """
+        Convenience method to extract a property from the file item key.
+
+        :param property_name: The name of the property to get the value for.
+        :type property_name: str
+
+        :return: The property value.
+        :rtype: any
+        """
+
+        for name, value in self._key:
+            if name == property_name:
+                return value
+        return None
 
     def generate_badge(self):
         self._badge = None
@@ -534,7 +561,7 @@ class FileItem(object):
                 latest_version = self.versions[max_version]
 
             publish_versions = [
-                f.version for f in six.itervalues(self.versions) if f.is_published
+                f.version for f in self.versions.values() if f.is_published
             ]
             if publish_versions:
                 max_pub_version = max(publish_versions)

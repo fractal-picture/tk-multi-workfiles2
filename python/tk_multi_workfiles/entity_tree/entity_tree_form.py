@@ -100,7 +100,7 @@ class EntityTreeForm(QtGui.QWidget):
         self._current_item_ref = None
 
         # Loose reference to expanded/selected entities used when the model is
-        # reset to re-expand the tree from the SG entities.
+        # reset to re-expand the tree from the PTR entities.
         self._expanded_item_values = []
         self._selected_item_value = []
 
@@ -121,13 +121,16 @@ class EntityTreeForm(QtGui.QWidget):
         self._ui.search_ctrl.set_placeholder_text("Search %s" % search_label)
         self._ui.search_ctrl.setToolTip("Press enter to complete the search")
 
+        # Task status filter
+        self._ui.task_status_combo.hide()
+
         # Hide the my-tasks-only checkbox if we are showing tasks, or if the entity
         # model is making use of deferred queries. In the latter case, we don't
         # have the data queried up front that's needed to properly filter the
         # tree down to "my tasks", so the checkbox won't function properly.
         #
         # We're also hiding it if we're working with script-key auth and no
-        # named user was determined in SG.
+        # named user was determined in PTR.
         represents_tasks = entity_model.represents_tasks
         if (
             not represents_tasks
@@ -527,7 +530,8 @@ class EntityTreeForm(QtGui.QWidget):
             filter_reg_exp = QtCore.QRegExp(
                 search_text, QtCore.Qt.CaseInsensitive, QtCore.QRegExp.FixedString
             )
-            self._ui.entity_tree.model().setFilterRegExp(filter_reg_exp)
+            if self._ui.entity_tree.model():
+                self._ui.entity_tree.model().setFilterRegExp(filter_reg_exp)
         finally:
             # and update the selection - this will restore the original selection if possible.
             self._update_selection(prev_selected_item)
@@ -848,7 +852,7 @@ class EntityTreeForm(QtGui.QWidget):
                 name_token = get_sg_entity_name_field(entity["type"])
                 # In some cases the name is not stored in under regular entity field
                 # name, but under the "name" key, e.g. if the Entity was retrieved
-                # from a TK context or using a nested SG query. So check if the
+                # from a TK context or using a nested PTR query. So check if the
                 # expected key is present, use "name" if not.
                 if name_token not in entity:
                     name_token = "name"

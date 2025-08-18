@@ -8,15 +8,13 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-"""
-"""
+""" """
 import os
 import sys
 import re
 import sgtk
 from sgtk.platform.qt import QtGui
 from sgtk import TankError
-from tank_vendor import six
 
 from .file_action import FileAction
 from ..scene_operation import (
@@ -369,7 +367,7 @@ class ContinueFromFileAction(OpenFileAction):
     def __init__(self, label, file, file_versions, environment):
         """ """
         # Q. should the next version include the current version?
-        all_versions = [v for v, f in six.iteritems(file_versions)] + [file.version]
+        all_versions = [v for v, f in file_versions.items()] + [file.version]
         max_version = max(all_versions)
         self._version = max_version + 1
         label = "%s (as v%03d)" % (label, self._version)

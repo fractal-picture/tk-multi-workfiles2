@@ -8,12 +8,10 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-"""
-"""
+""" """
 import sgtk
 from sgtk.platform.qt import QtCore, QtGui
 from sgtk import TankError
-from tank_vendor import six
 
 from .open_file_action import (
     OpenFileAction,
@@ -29,7 +27,7 @@ class OpenPublishAction(OpenFileAction):
 
     def __init__(self, file, file_versions, environment):
         """ """
-        all_versions = [v for v, f in six.iteritems(file_versions)]
+        all_versions = [v for v, f in file_versions.items()]
         max_version = max(all_versions) if all_versions else 0
 
         label = ""

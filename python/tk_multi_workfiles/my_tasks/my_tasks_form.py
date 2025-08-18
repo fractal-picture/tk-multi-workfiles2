@@ -13,11 +13,11 @@ Implementation of the my tasks list widget consisting of a list view displaying 
 of a Shotgun data model of my tasks, a text search and a filter control.
 """
 
-from .my_task_item_delegate import MyTaskItemDelegate
 from ..util import monitor_qobject_lifetime
 from ..entity_tree.entity_tree_form import EntityTreeForm
+from ..framework_qtwidgets import ViewItemDelegate, sg_qwidgets
 
-from sgtk.platform.qt import QtCore
+from sgtk.platform.qt import QtCore, QtGui
 
 
 class MyTasksForm(EntityTreeForm):
@@ -47,17 +47,19 @@ class MyTasksForm(EntityTreeForm):
         # There is no need for the my tasks toggle.
         self._ui.my_tasks_cb.hide()
 
+        # Task status filter
+        self._ui.task_status_combo.show()
+
         # Sets an item delete to show a list of tiles for tasks instead of nodes in a tree.
-        self._item_delegate = None
-        # create the item delegate - make sure we keep a reference to the delegate otherwise
-        # things may crash later on!
-        self._item_delegate = MyTaskItemDelegate(
-            tasks_model.extra_display_fields, self._ui.entity_tree
-        )
+        # Make sure we keep a reference to the delegate otherwise things may crash later on
+        self._item_delegate = self._create_delegate(tasks_model, self._ui.entity_tree)
+
         monitor_qobject_lifetime(self._item_delegate)
         self._ui.entity_tree.setItemDelegate(self._item_delegate)
 
         self._ui.entity_tree.doubleClicked.connect(self._on_double_clicked)
+
+        self._sort_button_setup()
 
     def shut_down(self):
         """
@@ -81,3 +83,41 @@ class MyTasksForm(EntityTreeForm):
         """
         entity_details = self._get_entity_details(idx)
         self.task_double_clicked.emit(entity_details)
+
+    def _create_delegate(self, model, view):
+        """Create the delegate for the tree view."""
+
+        delegate = ViewItemDelegate(view)
+
+        delegate.thumbnail_role = model.VIEW_ITEM_THUMBNAIL_ROLE
+        delegate.header_role = model.VIEW_ITEM_HEADER_ROLE
+        delegate.subtitle_role = model.VIEW_ITEM_SUBTITLE_ROLE
+        delegate.text_role = model.VIEW_ITEM_TEXT_ROLE
+        delegate.icon_role = model.VIEW_ITEM_ICON_ROLE
+        delegate.expand_role = model.VIEW_ITEM_EXPAND_ROLE
+        delegate.width_role = model.VIEW_ITEM_WIDTH_ROLE
+        delegate.height_role = model.VIEW_ITEM_HEIGHT_ROLE
+        delegate.loading_role = model.VIEW_ITEM_LOADING_ROLE
+        delegate.separator_role = model.VIEW_ITEM_SEPARATOR_ROLE
+
+        delegate.text_rect_valign = ViewItemDelegate.CENTER
+        delegate.override_item_tooltip = True
+        delegate.thumbnail_padding = 6
+
+        delegate.item_height = 64
+        delegate.thumbnail_padding = ViewItemDelegate.Padding(7, 0, 7, 7)
+        delegate.thumbnail_uniform = True
+
+        view.setMouseTracking(True)
+        view.setRootIsDecorated(False)
+
+        return delegate
+
+    def _sort_button_setup(self):
+        self.sort_menu_button = sg_qwidgets.SGQToolButton()
+        self.sort_menu_button.setText("Sort")
+        self.sort_menu_button.setObjectName("sort_menu_button")
+        self.sort_menu_button.setStyleSheet("border :None")
+        self.sort_menu_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+        self.sort_menu_button.setMinimumHeight(24)
+        self._ui.horizontalLayout_2.addWidget(self.sort_menu_button)

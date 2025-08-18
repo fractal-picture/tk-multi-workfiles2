@@ -8,8 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-"""
-"""
+""" """
 
 import sgtk
 from ..entity_proxy_model import EntityProxyModel
@@ -28,11 +27,7 @@ class EntityTreeProxyModel(EntityProxyModel):
         """ """
         EntityProxyModel.__init__(self, parent, compare_sg_fields)
         self._only_show_my_tasks = False
-
-        # set proxy to auto sort alphabetically
-        self.setDynamicSortFilter(True)
         self.setSortCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        self.sort(0, QtCore.Qt.AscendingOrder)
 
     # @property
     def _get_only_show_my_tasks(self):
